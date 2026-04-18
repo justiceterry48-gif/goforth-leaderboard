@@ -1,12 +1,12 @@
 const fs = require('fs');
 
-// Credentials come from GitHub Secrets — never hardcoded
-const GROUP_ID     = process.env.GROUP_ID;
-const API_KEY      = process.env.API_KEY;
+// Trim whitespace from secrets to avoid auth issues
+const GROUP_ID     = (process.env.GROUP_ID || '').trim();
+const API_KEY      = (process.env.API_KEY  || '').trim();
 const CHALLENGE_ID = 58723;
-const START        = '2026-05-01';  // UPDATE for each new challenge
-const END          = '2026-05-31';  // UPDATE for each new challenge
-const DAYS         = 30;           // UPDATE for each new challenge
+const START        = '2026-04-06';
+const END          = '2026-04-26';
+const DAYS         = 21;
 
 const LOC_TAGS = {
   'go-forth high point':        'High Point',
@@ -29,13 +29,23 @@ const HEADS = {
   'Accept':        'application/json',
 };
 
+// Log auth info for debugging (safe — only shows length not actual values)
+console.log('GROUP_ID length: ' + GROUP_ID.length);
+console.log('API_KEY length:  ' + API_KEY.length);
+console.log('Auth header set: ' + (AUTH.length > 0 ? 'yes' : 'NO - EMPTY'));
+
+if (!GROUP_ID || !API_KEY) {
+  console.error('ERROR: GROUP_ID or API_KEY is empty. Check GitHub Secrets.');
+  process.exit(1);
+}
+
 async function post(endpoint, body) {
   const res  = await fetch(BASE + endpoint, {
     method: 'POST', headers: HEADS,
     body:   JSON.stringify(body),
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(res.status + ' on ' + endpoint);
+  if (!res.ok) throw new Error(res.status + ' on ' + endpoint + ' — ' + text.substring(0, 200));
   try { return JSON.parse(text); }
   catch(e) { throw new Error('Non-JSON from ' + endpoint); }
 }
@@ -79,7 +89,7 @@ async function getParticipants() {
     if (seen.has(id)) return false;
     seen.add(id); return true;
   });
-  console.log('Total participants: ' + unique.length);
+  console.log('Total: ' + unique.length);
   return unique;
 }
 
@@ -97,11 +107,6 @@ async function getUserLocation(userID) {
 }
 
 async function main() {
-  if (!GROUP_ID || !API_KEY) {
-    console.error('ERROR: GROUP_ID and API_KEY must be set as GitHub Secrets');
-    process.exit(1);
-  }
-
   console.log('=== GOFORTH LEADERBOARD SYNC ===');
   console.log(new Date().toLocaleString());
   console.log('Challenge: ' + CHALLENGE_ID);
@@ -111,7 +116,7 @@ async function main() {
   const participants = await getParticipants();
   if (participants.length === 0) { console.log('No participants!'); process.exit(1); }
 
-  console.log('\nFetching location tags...');
+  console.log('Fetching location tags...');
   const people = [];
 
   for (let i = 0; i < participants.length; i++) {
@@ -120,13 +125,11 @@ async function main() {
     const name   = (p.name || '').trim() || 'Employee ' + (i+1);
     const points = p.points || 0;
     const location = await getUserLocation(id);
-
     people.push({ id, name, points, location, email: p.email || '' });
-    if ((i+1) % 20 === 0) console.log('  Processed ' + (i+1) + '/' + participants.length);
+    if ((i+1) % 25 === 0) console.log('  ' + (i+1) + '/' + participants.length + ' done');
     await delay(150);
   }
 
-  // Build location summaries
   const locMap = {};
   people.forEach(p => {
     const loc = p.location || 'Unassigned';
@@ -166,7 +169,6 @@ async function main() {
   console.log('Participants: ' + people.length);
   console.log('Active: ' + output.activeParticipants);
   console.log('Total points: ' + output.totalPoints);
-  console.log('Day: ' + day + ' of ' + DAYS);
 
   console.log('\nSTANDINGS:');
   locations.forEach((loc, i) => {
