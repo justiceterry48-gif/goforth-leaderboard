@@ -1,0 +1,33 @@
+name: Nightly Leaderboard Sync
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # Runs at midnight EST (4am UTC) every night
+  workflow_dispatch:      # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Trainerize sync
+        env:
+          GROUP_ID: ${{ secrets.GROUP_ID }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: node sync.js
+
+      - name: Commit and push updated data
+        run: |
+          git config --global user.name "JusFit Bot"
+          git config --global user.email "bot@jusfitnc.com"
+          git add leaderboard_data.json
+          git diff --staged --quiet || git commit -m "Auto-sync leaderboard data $(date +'%Y-%m-%d')"
+          git push
