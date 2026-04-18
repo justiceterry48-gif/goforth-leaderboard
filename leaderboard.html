@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoForth Wellness — Live Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#C0281C;--red-dark:#8f1d13;
+  --charcoal:#1a1a1a;--c2:#242424;--c3:#303030;--c4:#3a3a3a;
+  --white:#fff;--muted:#888;
+  --gold:#d4a017;--silver:#8a9bb0;--bronze:#a0622a;
+  --green:#4caf50;--orange:#ff9500;
+  --fd:'Barlow Condensed',sans-serif;--fb:'Barlow',sans-serif;
+}
+body{background:var(--charcoal);color:var(--white);font-family:var(--fb);min-height:100vh}
+.hdr{background:var(--c2);border-bottom:3px solid var(--red);padding:0 1.5rem;position:sticky;top:0;z-index:100}
+.hdr-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-arrow{width:34px;height:34px;background:var(--red);display:flex;align-items:center;justify-content:center;clip-path:polygon(0 0,75% 0,100% 50%,75% 100%,0 100%,25% 50%)}
+.logo-text{font-family:var(--fd);font-size:19px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.logo-text span{color:var(--red)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:6px;background:var(--c3);border-radius:20px;padding:5px 12px;font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.refresh-btn{background:none;border:1px solid var(--c3);border-radius:6px;padding:5px 10px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--fb)}
+.refresh-btn:hover{border-color:var(--red);color:var(--white)}
+.hero{background:var(--c2);padding:2rem 1.5rem 1.75rem;text-align:center;position:relative;overflow:hidden;border-bottom:1px solid var(--c3)}
+.hero::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(192,40,28,.025) 40px,rgba(192,40,28,.025) 41px);pointer-events:none}
+.hero-eyebrow{font-family:var(--fd);font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin-bottom:6px}
+.hero-title{font-family:var(--fd);font-size:clamp(26px,5vw,50px);font-weight:800;text-transform:uppercase;letter-spacing:1px;line-height:1;margin-bottom:1.25rem}
+.hero-stats{display:flex;justify-content:center;gap:2rem;flex-wrap:wrap}
+.hstat{text-align:center}
+.hstat-num{font-family:var(--fd);font-size:32px;font-weight:800;color:var(--red);display:block;line-height:1}
+.hstat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500;margin-top:3px;display:block}
+.progress-wrap{max-width:460px;margin:1.25rem auto 0}
+.progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.progress-track{height:5px;background:var(--c3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--red);border-radius:3px;transition:width 1s ease}
+.tabs-wrap{max-width:1100px;margin:1.5rem auto 0;padding:0 1.5rem}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--c3)}
+.tab{font-family:var(--fd);font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);padding:9px 18px;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:#ccc}
+.tab.active{color:var(--white);border-bottom-color:var(--red)}
+.content{max-width:1100px;margin:0 auto;padding:1.5rem}
+.panel{display:none}.panel.active{display:block}
+.state-box{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:14px}
+.spinner{width:32px;height:32px;border:3px solid var(--c3);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.loc-card{background:var(--c2);border:1px solid var(--c3);border-radius:10px;padding:1.25rem;position:relative;overflow:hidden;animation:fadeUp .4s ease both}
+.loc-card.rank-1{border-color:var(--gold)}.loc-card.rank-2{border-color:var(--silver)}.loc-card.rank-3{border-color:var(--bronze)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bg-rank{position:absolute;top:0;right:0;font-family:var(--fd);font-size:90px;font-weight:800;color:rgba(255,255,255,.03);line-height:1;padding:0 10px;pointer-events:none;user-select:none}
+.loc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
+.rank-circle{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:15px;font-weight:800;flex-shrink:0}
+.r1{background:var(--gold);color:#3a2800}.r2{background:var(--silver);color:#1a2533}.r3{background:var(--bronze);color:#2a1500}.r4{background:var(--c4);color:#bbb}
+.loc-name-wrap{margin-top:8px}
+.loc-name{font-family:var(--fd);font-size:21px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;line-height:1}
+.loc-sub{font-size:12px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.8px}
+.loc-pts-block{text-align:right}
+.loc-pts-num{font-family:var(--fd);font-size:28px;font-weight:800;color:var(--red);display:block;line-height:1}
+.loc-pts-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.loc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.loc-stat{background:var(--c3);border-radius:6px;padding:7px;text-align:center}
+.loc-stat-n{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--white);display:block}
+.loc-stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.bar-top{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase}
+.bar-track{height:4px;background:var(--c3);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.loc-card.rank-1 .bar-fill{background:var(--gold)}.loc-card.rank-2 .bar-fill{background:var(--silver)}.loc-card.rank-3 .bar-fill{background:var(--bronze)}
+.loc-card:not(.rank-1):not(.rank-2):not(.rank-3) .bar-fill{background:#666}
+.tbl-wrap{background:var(--c2);border:1px solid var(--c3);border-radius:10px;overflow:hidden}
+.tbl-hdr{display:grid;grid-template-columns:44px 1fr 100px 85px;padding:9px 14px;border-bottom:1px solid var(--c3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#555}
+.tbl-row{display:grid;grid-template-columns:44px 1fr 100px 85px;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;transition:background .15s;animation:fadeUp .3s ease both}
+.tbl-row:last-child{border-bottom:none}.tbl-row:hover{background:rgba(255,255,255,.025)}
+.row-rank{font-family:var(--fd);font-size:15px;font-weight:800;color:#444;text-align:center}
+.row-rank.g{color:var(--gold)}.row-rank.s{color:var(--silver)}.row-rank.b{color:var(--bronze)}
+.row-person{display:flex;align-items:center;gap:9px}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:700;flex-shrink:0}
+.row-name{font-size:13px;font-weight:600;color:var(--white);display:block}
+.row-loc{font-size:11px;color:var(--muted);display:block}
+.row-pts{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--white)}
+.loc-pill{font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 7px;border-radius:4px;display:inline-block}
+.footer{text-align:center;padding:2rem 1.5rem;border-top:1px solid var(--c3);margin-top:1rem}
+.join-btn{display:inline-flex;align-items:center;gap:8px;background:var(--red);color:white;font-family:var(--fd);font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:13px 28px;border-radius:6px;text-decoration:none;transition:background .15s;margin-bottom:12px}
+.join-btn:hover{background:var(--red-dark)}
+.footer-note{font-size:12px;color:#555;margin-top:8px}
+.last-updated{font-size:11px;color:#444;margin-top:6px}
+@media(max-width:600px){.tbl-hdr,.tbl-row{grid-template-columns:36px 1fr 80px}.col-loc{display:none}}
+</style>
+</head>
+<body>
+<script>
+// ============================================================
+// LIVE DATA URL — reads directly from GitHub every time page loads
+// Updates automatically every night when sync script runs
+// ============================================================
+const DATA_URL = 'https://raw.githubusercontent.com/justiceterry48-gif/goforth-leaderboard/main/leaderboard_data.json';
+const JOIN_FORM_URL = '#'; // Replace with your Google Form URL
+
+const LOC_COLORS = {
+  'high point':        {bg:'rgba(192,40,28,.18)',  text:'#f08070', code:'HP'},
+  'raleigh':           {bg:'rgba(26,122,74,.18)',   text:'#70d090', code:'RAL'},
+  'charlotte':         {bg:'rgba(212,160,23,.18)',  text:'#e8c060', code:'CLT'},
+  'lake norman':       {bg:'rgba(80,120,200,.18)',  text:'#90b0f0', code:'LKN'},
+  'wilmington':        {bg:'rgba(160,60,160,.18)',  text:'#d090d0', code:'ILM'},
+  'hickory':           {bg:'rgba(200,140,40,.18)',  text:'#e0b060', code:'HKY'},
+  'columbia':          {bg:'rgba(40,160,160,.18)',  text:'#60d0d0', code:'COL'},
+  'richmond':          {bg:'rgba(160,80,40,.18)',   text:'#e09060', code:'RIC'},
+  'virginia beach':    {bg:'rgba(40,100,200,.18)',  text:'#80b0f0', code:'VB'},
+  'northern virginia': {bg:'rgba(100,40,160,.18)', text:'#c090f0', code:'NOVA'},
+  'unassigned':        {bg:'rgba(100,100,100,.18)', text:'#aaa',    code:'—'},
+};
+
+function lc(loc) {
+  return LOC_COLORS[(loc||'').toLowerCase().trim()]
+      || {bg:'rgba(100,100,100,.18)', text:'#aaa', code:(loc||'??').substring(0,3).toUpperCase()};
+}
+function initials(n) { return (n||'??').split(' ').map(p=>p[0]||'').join('').substring(0,2).toUpperCase(); }
+function rankCls(i)  { return ['r1','r2','r3'][i]||'r4'; }
+
+function renderAll(data) {
+  const pct = Math.round((data.challengeDay / data.totalDays) * 100);
+  document.getElementById('h-p').textContent    = data.totalParticipants;
+  document.getElementById('h-pts').textContent  = data.totalPoints.toLocaleString();
+  document.getElementById('h-active').textContent = data.activeParticipants;
+  document.getElementById('h-days').textContent = Math.max(0, data.totalDays - data.challengeDay);
+  document.getElementById('pfill').style.width  = pct + '%';
+  document.getElementById('pday').textContent   = 'Day ' + data.challengeDay + ' of ' + data.totalDays;
+  const lu = new Date(data.lastUpdated);
+  document.getElementById('last-updated').textContent = 'Last synced: ' + lu.toLocaleString();
+
+  renderTeams(data.locations);
+  renderIndividuals(data.individuals);
+}
+
+function renderTeams(locations) {
+  const grid   = document.getElementById('teams-grid');
+  const maxPts = locations[0]?.totalPts || 1;
+
+  if (!locations || locations.length === 0) {
+    grid.innerHTML = '<div class="state-box"><p>No location data yet — add Go-Forth location tags in Trainerize.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = locations.map((loc, i) => {
+    const rank = i + 1;
+    const rc   = rankCls(i);
+    const barW = Math.round((loc.totalPts / maxPts) * 100);
+    return `
+    <div class="loc-card rank-${Math.min(rank,4)}" style="animation-delay:${i*.07}s">
+      <div class="bg-rank">${rank}</div>
+      <div class="loc-header">
+        <div>
+          <div class="rank-circle ${rc}">${rank}</div>
+          <div class="loc-name-wrap">
+            <div class="loc-name">${loc.name}</div>
+            <div class="loc-sub">${loc.memberCount} participant${loc.memberCount!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="loc-pts-block">
+          <span class="loc-pts-num">${loc.totalPts.toLocaleString()}</span>
+          <span class="loc-pts-lbl">team pts</span>
+        </div>
+      </div>
+      <div class="loc-stats">
+        <div class="loc-stat"><span class="loc-stat-n">${loc.ptsPerPerson}</span><span class="loc-stat-l">pts/person</span></div>
+        <div class="loc-stat"><span class="loc-stat-n">${loc.compRate}%</span><span class="loc-stat-l">active</span></div>
+        <div class="loc-stat"><span class="loc-stat-n" style="color:var(--orange)">${loc.topScore||0}</span><span class="loc-stat-l">top score</span></div>
+      </div>
+      <div class="bar-top"><span>Participation</span><span>${loc.compRate}%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${barW}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderIndividuals(people) {
+  const tbody = document.getElementById('ind-body');
+  if (!people || people.length === 0) {
+    tbody.innerHTML = '<div class="state-box"><p>No participants yet.</p></div>';
+    return;
+  }
+  tbody.innerHTML = people.map((p, i) => {
+    const rank = i + 1;
+    const rc   = rank===1?'g':rank===2?'s':rank===3?'b':'';
+    const col  = lc(p.location);
+    return `
+    <div class="tbl-row" style="animation-delay:${Math.min(i,20)*.03}s">
+      <div class="row-rank ${rc}">${rank}</div>
+      <div class="row-person">
+        <div class="avatar" style="background:${col.bg};color:${col.text}">${initials(p.name)}</div>
+        <div><span class="row-name">${p.name}</span><span class="row-loc">${p.location||'—'}</span></div>
+      </div>
+      <div class="row-pts">${p.points.toLocaleString()}</div>
+      <div class="col-loc"><span class="loc-pill" style="background:${col.bg};color:${col.text}">${col.code}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function loadData() {
+  document.getElementById('teams-grid').innerHTML =
+    '<div class="state-box"><div class="spinner"></div><p>Loading live data...</p></div>';
+  try {
+    const res  = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    renderAll(data);
+  } catch(e) {
+    document.getElementById('teams-grid').innerHTML = `
+      <div class="state-box">
+        <div style="font-size:32px;margin-bottom:12px">⚡</div>
+        <p style="font-weight:600;color:#ccc;margin-bottom:8px">Setting up live data...</p>
+        <p style="font-size:13px;color:#666">The leaderboard will update automatically once the first sync runs.</p>
+      </div>`;
+  }
+}
+
+// Auto-refresh every 10 minutes
+setInterval(loadData, 10 * 60 * 1000);
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('join-btn').href = JOIN_FORM_URL;
+  loadData();
+});
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+</script>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">
+      <div class="logo-arrow">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M9 3l5 5-5 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="logo-text">Go<span>Forth</span> Wellness</div>
+    </div>
+    <div class="hdr-right">
+      <div class="live-badge"><div class="live-dot"></div><span>Live</span></div>
+      <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <p class="hero-eyebrow">May 2026 · 30-Day Challenge</p>
+  <h1 class="hero-title">Summer Strong:<br>30-Day Power Challenge</h1>
+  <div class="hero-stats">
+    <div class="hstat"><span class="hstat-num" id="h-p">—</span><span class="hstat-label">Participants</span></div>
+    <div class="hstat"><span class="hstat-num" id="h-pts">—</span><span class="hstat-label">Total points</span></div>
+    <div class="hstat"><span class="hstat-num" id="h-active">—</span><span class="hstat-label">Active members</span></div>
+    <div class="hstat"><span class="hstat-num" id="h-days">—</span><span class="hstat-label">Days remaining</span></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Challenge progress</span><span id="pday">—</span></div>
+    <div class="progress-track"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+  </div>
+</section>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('teams',this)">Team standings</button>
+    <button class="tab" onclick="switchTab('individual',this)">Individual rankings</button>
+  </div>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-teams">
+    <div class="loc-grid" id="teams-grid">
+      <div class="state-box"><div class="spinner"></div><p>Loading...</p></div>
+    </div>
+  </div>
+  <div class="panel" id="panel-individual">
+    <div class="tbl-wrap">
+      <div class="tbl-hdr">
+        <div style="text-align:center">#</div>
+        <div>Employee</div>
+        <div>Points</div>
+        <div class="col-loc">Location</div>
+      </div>
+      <div id="ind-body"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <a class="join-btn" id="join-btn" href="#">Join your location's team →</a>
+  <div class="footer-note">Download JUSFIT to start earning points for your team</div>
+  <div class="last-updated" id="last-updated"></div>
+</div>
+</body>
+</html>
